@@ -21,8 +21,7 @@
 
 
 // CSecurityMaxDlg 对话框
-
-
+CRITICAL_SECTION g_critical;
 CSecurityMaxDlg::CSecurityMaxDlg(CWnd* pParent /*=nullptr*/)
 	: CDialogEx(IDD_SECURITYMAX_DIALOG, pParent)
 {
@@ -35,6 +34,27 @@ void CSecurityMaxDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_TAB1, m_Tab);
 }
 
+DWORD WINAPI ProcTh(LPVOID lpvoid)
+{
+	CP* cp = (CP*)lpvoid;
+	DWORD dwPIDList[1000] = { 0 };
+	DWORD bufSize = sizeof(dwPIDList);
+	DWORD dwNeedSize = 0;
+	MEMORYSTATUSEX stcMemStatusEx = { 0 };
+	while (true)
+	{
+		EnterCriticalSection(&g_critical);
+		cp->cpUse = getCpuUse();
+		stcMemStatusEx.dwLength = sizeof(stcMemStatusEx);
+		GlobalMemoryStatusEx(&stcMemStatusEx);
+		cp->chUse= stcMemStatusEx.dwMemoryLoad;
+		EnumProcesses(dwPIDList, bufSize, &dwNeedSize);
+		cp->Size = dwNeedSize / sizeof(DWORD);
+		LeaveCriticalSection(&g_critical);
+	}
+
+	return true;
+}
 BEGIN_MESSAGE_MAP(CSecurityMaxDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
@@ -52,12 +72,16 @@ END_MESSAGE_MAP()
 
 // CSecurityMaxDlg 消息处理程序
 
+
 BOOL CSecurityMaxDlg::OnInitDialog()
 {
 
 	CDialogEx::OnInitDialog();
 	InitStatusBar();
+	InitializeCriticalSection(&g_critical);
 	SetTimer(100, 1000, NULL);
+	cp = { 0 };
+	CreateThread(NULL, 0, ProcTh, (LPVOID)&cp, 0, NULL);
 	::RegisterHotKey(m_hWnd, 0x1244, MOD_CONTROL | MOD_SHIFT, 'X');//ctrl+shift+L
 	// 设置此对话框的图标。  当应用程序主窗口不是对话框时，框架将自动
 	//  执行此操作
@@ -133,19 +157,18 @@ BOOL CSecurityMaxDlg::InitStatusBar()
 	m_bar.MoveWindow(0, rect.bottom - 20, rect.right, 20);
 	CString buffer;
 	//设置各栏长度
-	m_bar.SetPaneInfo(0, IDS_STRING167, SBPS_NORMAL, 80);
-	m_bar.SetPaneInfo(1, IDS_STRING168, SBPS_STRETCH, 80);
+	m_bar.SetPaneInfo(0, IDS_STRING167, SBPS_STRETCH, 60);
+	m_bar.SetPaneInfo(1, IDS_STRING168, SBPS_STRETCH, 100);
 	m_bar.SetPaneInfo(2, IDS_STRING169, SBPS_STRETCH, 80);
-	m_bar.SetPaneInfo(3, IDS_STRING170, SBPS_STRETCH, 80);
+	m_bar.SetPaneInfo(3, IDS_STRING170, SBPS_STRETCH, 100);
 	m_bar.SetPaneInfo(4, IDS_STRING171, SBPS_STRETCH, 80);
-	m_bar.SetPaneInfo(5, IDS_STRING172, SBPS_STRETCH, 80);
+	m_bar.SetPaneInfo(5, IDS_STRING172, SBPS_STRETCH, 100);
 	m_bar.SetPaneInfo(6, IDS_STRING173, SBPS_STRETCH, 80);
 	m_bar.SetPaneInfo(7, IDS_STRING174, SBPS_STRETCH, 150);
 	m_bar.SetPaneText(0, L"进程数：");
-	buffer.Format(L"%d", dwNeedSize / sizeof(DWORD));
-	m_bar.SetPaneText(1, buffer);
+
 	m_bar.SetPaneText(2, L"CPU利用率");
-	buffer.Format(L"%d", getCpuUse);
+	buffer.Format(L"%d", getCpuUse());
 	m_bar.SetPaneText(3, buffer);
 	m_bar.SetPaneText(4, L"内存占用率");
 	buffer.Format(L"%d", 00);
@@ -214,7 +237,7 @@ void CSecurityMaxDlg::On32778()
 	DWORDLONG preUsedMem = stcMemStatusEx.ullTotalPhys - stcMemStatusEx.ullAvailPhys;
 	DWORD dwPIDList[1000] = { 0 };
 	DWORD bufSize = sizeof(dwPIDList);
-	 dwNeedSize = 0;
+	DWORD dwNeedSize = 0;
 	EnumProcesses(dwPIDList, bufSize, &dwNeedSize);
 	for (DWORD i = 0; i < dwNeedSize / sizeof(DWORD); i++)
 	{
@@ -267,8 +290,6 @@ BOOL CSecurityMaxDlg::PreTranslateMessage(MSG* pMsg)
 
 	return CDialogEx::PreTranslateMessage(pMsg);
 }
-
-
 void CSecurityMaxDlg::OnTcnSelchangeTab1(NMHDR* pNMHDR, LRESULT* pResult)
 {
 	// TODO: 在此添加控件通知处理程序代码
@@ -290,11 +311,12 @@ void CSecurityMaxDlg::OnTimer(UINT_PTR nIDEvent)
 		t1 = CTime::GetCurrentTime();
 		//    m_bar.SetPaneText(1,t1.Format("%Y-%M-%F:%H:%M:%S"));
 		m_bar.SetPaneText(7, t1.Format("  %Y-%m-%d  %H:%M:%S"));
-		MEMORYSTATUSEX stcMemStatusEx = { 0 };
-		stcMemStatusEx.dwLength = sizeof(stcMemStatusEx);
-		GlobalMemoryStatusEx(&stcMemStatusEx);
-		buffer.Format(L"%d", stcMemStatusEx.dwMemoryLoad);
+		buffer.Format(L"%d", cp.chUse);
 		m_bar.SetPaneText(5, buffer);
+		buffer.Format(L"%d", cp.Size);
+		m_bar.SetPaneText(1, buffer);
+		buffer.Format(L"%d", cp.cpUse);
+		m_bar.SetPaneText(3, buffer);
 	}
 	CDialogEx::OnTimer(nIDEvent);
 }

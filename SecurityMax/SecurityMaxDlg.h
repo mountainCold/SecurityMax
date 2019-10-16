@@ -7,6 +7,12 @@
 #include "resource.h"
 
 // CSecurityMaxDlg 对话框
+struct CP
+{
+	WORD cpUse;
+	WORD chUse;
+	DWORD Size;
+};
 class CSecurityMaxDlg : public CDialogEx
 {
 // 构造
@@ -35,8 +41,7 @@ public:
 	MyTab m_Tab;
 	CStatusBar  m_bar;
 	//进程大小 DWORD
-	DWORD dwNeedSize;
-	DWORD mem;
+	CP cp;
 	BOOL InitStatusBar();
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg void On32774();

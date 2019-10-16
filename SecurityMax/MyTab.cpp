@@ -62,7 +62,7 @@ void MyTab::InsertTabWnd(int count, ...)
 		// 以选项卡为准，重新设置窗口的位置
 	CRect Rect = { };
 	this->GetClientRect(&Rect);
-	Rect.DeflateRect(0, 23, 0, 23);
+	Rect.DeflateRect(0, 23, 0, 0);
 	for (int i = 0; i < m_WndVec.size(); ++i)
 		m_WndVec[i]->MoveWindow(&Rect);
 
