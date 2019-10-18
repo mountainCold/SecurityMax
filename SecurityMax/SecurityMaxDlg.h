@@ -53,4 +53,8 @@ public:
 	afx_msg void On32779();
 	afx_msg void On32778();
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
+	afx_msg void On32782();
+	afx_msg void On32783();
+	afx_msg void OnClose();
+	afx_msg void On32787();
 };

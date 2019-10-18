@@ -37,6 +37,7 @@ BEGIN_MESSAGE_MAP(CProcessDlg, CDialogEx)
 	ON_COMMAND(ID_32772, &CProcessDlg::On32772)
 	ON_COMMAND(ID_32771, &CProcessDlg::On32771)
 	ON_COMMAND(ID_32773, &CProcessDlg::On32773)
+	ON_COMMAND(ID_32786, &CProcessDlg::On32786)
 END_MESSAGE_MAP()
 
 // CProcessDlg 消息处理程序
@@ -195,7 +196,34 @@ void CProcessDlg::On32773()
 
 
 }
+DWORD WINAPI GetMainThreadID(DWORD dwOwnerPID)
+{
+	HANDLE hThreadSnap = INVALID_HANDLE_VALUE;
+	THREADENTRY32 te32;
+	DWORD dwThreadID = 0;
+	hThreadSnap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+	if (hThreadSnap == INVALID_HANDLE_VALUE)
+	{
+		return 0;
+	}
 
+	te32.dwSize = sizeof(THREADENTRY32);
+	if (!Thread32First(hThreadSnap, &te32))
+	{
+		CloseHandle(hThreadSnap);
+	}
+	do
+	{
+		if (te32.th32OwnerProcessID == dwOwnerPID)
+		{
+			dwThreadID = te32.th32ThreadID;
+			break;
+		}
+	} while (Thread32Next(hThreadSnap, &te32));
+
+	CloseHandle(hThreadSnap);
+	return(dwThreadID);
+}
 //查看线程
 void CProcessDlg::On32772()
 {
@@ -208,6 +236,8 @@ void CProcessDlg::On32772()
 	CString sPid = m_list.GetItemText(sel, 1);
 	CString stitle = m_list.GetItemText(sel, 0);
 	DWORD m_pid = _wtoi(sPid);
+	GetMainThreadID(m_pid);
+
 }
 
 //结束进程
@@ -234,4 +264,63 @@ void CProcessDlg::On32771()
 		CloseHandle(hProcess);
 	}
 	updateProcessList();
+}
+
+//保护进程
+void CProcessDlg::On32786()
+{
+	int sel = (int)m_list.GetFirstSelectedItemPosition();
+	if (sel == 0)
+	{
+		return;
+	}
+	sel -= 1;
+	CString sPid = m_list.GetItemText(sel, 1);
+	m_pid = _wtoi(sPid);
+	//3.打开进程，获取进程句柄
+	HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, m_pid);
+	WCHAR szDllPath[] = L"E:\\15pb\\阶段二\\SecurityMax\\Debug\\HOOkPRoc.dll";
+	//4.在目标进程中申请空间
+	LPVOID pBuff = VirtualAllocEx(
+		hProcess,
+		0,
+		sizeof(szDllPath),
+		MEM_RESERVE | MEM_COMMIT,
+		PAGE_EXECUTE_READWRITE
+	);
+
+	//5.将路径写入到目标进程中
+	DWORD dwSize;
+	WriteProcessMemory(
+		hProcess,
+		pBuff,			//在指申请的地址上
+		szDllPath,		//写入的内容
+		sizeof(szDllPath),//写入大小
+		&dwSize
+	);
+
+	//6.使用关键函数加载目标dll
+	// 利用远程创建线程函数，实现目标进程加载dll
+	// 远程线程执行函数直接指向LoadLibaray函数，同时参数指向dll路径，完美实现加载dll
+	//EnableDebugPrivilege();
+	HANDLE hThread = CreateRemoteThread(
+		hProcess,
+		NULL,
+		NULL,
+		(LPTHREAD_START_ROUTINE)LoadLibrary,		//线程执行地址指向LoadLibrary
+		pBuff,										//线程的附加参数dll路径
+		NULL, NULL
+	);
+	//7 释放句柄
+	if (hThread==NULL)
+	{
+		MessageBox(L"操作失败");
+	}
+	else
+	{
+		CloseHandle(hProcess);
+		CloseHandle(hThread);
+		MessageBox(L"添加成功");
+	}
+
 }

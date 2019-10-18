@@ -93,6 +93,15 @@
     <ClInclude Include="CRelocation.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Md5.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Client.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="CBingd.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="SecurityMax.cpp">
@@ -159,6 +168,15 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="CRelocation.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Md5.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Client.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="CBingd.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

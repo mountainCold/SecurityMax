@@ -69,7 +69,8 @@ void CDlgE::OnDropFiles(HDROP hDropInfo)
 
 void CDlgE::OnClickedButton1()
 {
-	CFileDialog    dlgFile(TRUE, NULL, NULL, OFN_HIDEREADONLY, _T("Describe Files (*.exe,*.dll)|*.exe|All Files (*.*)|*.*||"), NULL);
+	CFileDialog    dlgFile(TRUE, NULL, NULL, OFN_HIDEREADONLY,
+		_T("Describe Files (*.exe,*.dll)|*.exe|All Files (*.*)|*.*||"), NULL);
 	if (dlgFile.DoModal())
 	{
 		m_path =dlgFile.GetPathName();

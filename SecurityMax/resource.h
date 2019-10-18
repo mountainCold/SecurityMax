@@ -26,7 +26,9 @@
 #define IDR_TOOLBAR1                    165
 #define IDS_STRING167                   167
 #define IDS_STRING168                   168
+#define IDR_MENU4                       168
 #define IDS_STRING169                   169
+#define IDD_DIALOG6                     169
 #define IDS_STRING170                   170
 #define IDS_STRING171                   171
 #define IDS_STRING172                   172
@@ -120,6 +122,8 @@
 #define IDC_CHECK2                      1075
 #define IDC_CHECK3                      1076
 #define IDC_COMBO1                      1077
+#define IDC_RADIO1                      1078
+#define IDC_RADIO2                      1079
 #define ID_32771                        32771
 #define ID_32772                        32772
 #define ID_32773                        32773
@@ -131,14 +135,20 @@
 #define ID_32779                        32779
 #define ID_32780                        32780
 #define ID_32781                        32781
+#define ID_32782                        32782
+#define ID_32783                        32783
+#define ID_32784                        32784
+#define ID_32785                        32785
+#define ID_32786                        32786
+#define ID_32787                        32787
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        168
-#define _APS_NEXT_COMMAND_VALUE         32782
-#define _APS_NEXT_CONTROL_VALUE         1078
+#define _APS_NEXT_RESOURCE_VALUE        171
+#define _APS_NEXT_COMMAND_VALUE         32788
+#define _APS_NEXT_CONTROL_VALUE         1080
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

@@ -5,6 +5,7 @@
 #include "SecurityMax.h"
 #include "CDlgC.h"
 #include "afxdialogex.h"
+#include "CTool.h"
 
 
 // CDlgC 对话框
@@ -43,26 +44,7 @@ END_MESSAGE_MAP()
 // CDlgC 消息处理程序
 
 
-CString SelFilePathSimple()
-{
-	TCHAR szFolderPath[MAX_PATH] = { 0 };
-	CString strFolderPath = _T("");
 
-	BROWSEINFO sInfo;
-	::ZeroMemory(&sInfo, sizeof(BROWSEINFO));
-
-	LPITEMIDLIST lpidlBrowse = ::SHBrowseForFolder(&sInfo);
-	if (lpidlBrowse != NULL)
-	{
-		if (::SHGetPathFromIDList(lpidlBrowse, szFolderPath))
-		{
-			strFolderPath = szFolderPath;
-		}
-		::CoTaskMemFree(lpidlBrowse);
-	}
-	return strFolderPath;
-
-}
 //获取系统垃圾
 void CDlgC::setListTextF1(CString path, DWORD* num)
 {

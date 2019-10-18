@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "CTool.h"
 #include <Psapi.h>
+#include <vector>
 BOOL EnumProcess(std::vector<PROCESSINFO>* proclist)
 {
 	HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
@@ -300,6 +301,90 @@ int getCpuUse()
 	int res = (int)(100 - (tidleTime2 - tidleTime) / (tkernelTime2 - tkernelTime + tuserTime2 - tuserTime) * 100.0);
 	return res;
 }
+//查询权限
+BOOL QueryPrivileges()
+{
+	// 1. 获得本进程的令牌
+	HANDLE hToken = NULL;
+	if (!OpenProcessToken(
+		GetCurrentProcess(),	// 当前进程句柄
+		TOKEN_QUERY,			// 打开这个令牌作用
+		&hToken))				// 返回令牌句柄
+		return false;
+	// 2. 获取提升类型
+	TOKEN_ELEVATION_TYPE ElevationType = TokenElevationTypeDefault;
+	BOOL                 bIsAdmin = false;							// 是否管理员
+	DWORD                dwSize = 0;								// 权限信息结构体大小
+
+	// 获取令牌信息
+	if (GetTokenInformation(
+		hToken,							// 令牌句柄
+		TokenElevationType,				// 获取令牌信息类型
+		&ElevationType,					// 返回令牌信息类型对应的结构体
+		sizeof(TOKEN_ELEVATION_TYPE),	// 结构体大小
+		&dwSize))						// 实际大小
+	{
+		// 2.1 创建管理员组的对应SID
+		BYTE adminSID[SECURITY_MAX_SID_SIZE];		//管理员的SID标识
+		dwSize = sizeof(adminSID);					//管理员的SID标识的大小
+		// 获取管理员的SID
+		CreateWellKnownSid(
+			WinBuiltinAdministratorsSid,			// 查询类型
+			NULL,									// NULL
+			&adminSID,								// 存放管理员的SID缓冲区
+			&dwSize);								// 缓冲区大小
+
+
+		// 2.2 判断当前进程运行用户角色是否为管理员
+		// 当前权限是滤令牌（低权限令牌）
+		if (ElevationType == TokenElevationTypeLimited) {
+
+			// a. 获取连接令牌的句柄
+			HANDLE hUnfilteredToken = NULL;
+
+			GetTokenInformation(hToken,			//令牌句柄
+				TokenLinkedToken,				//链接令牌信息（账户令牌）
+				(PVOID)& hUnfilteredToken,		//链接令牌的句柄
+				sizeof(HANDLE),
+				&dwSize);
+
+			// b. 检查这个原始的令牌是否包含管理员的SID
+			if (!CheckTokenMembership(
+				hUnfilteredToken,		// 链接令牌句柄
+				&adminSID,				// 管理员的SID
+				&bIsAdmin))				// 返回是否管理员
+			{
+				return false;
+			}
+			CloseHandle(hUnfilteredToken);		//关闭句柄
+		}
+		else {
+			// 如果令牌是最高权限-或者关闭UAC
+			// 那么直接获取当前用户是否是管理员
+			bIsAdmin = IsUserAnAdmin();
+		}
+		CloseHandle(hToken);
+	}
+	// 3. 判断具体的权限状况
+	BOOL bFullToken = false;
+	// 判断提升类型
+	switch (ElevationType) {
+	case TokenElevationTypeDefault: /* 默认的用户或UAC被禁用 */
+		if (IsUserAnAdmin())  bFullToken = true; // 默认用户有管理员权限
+		else                  bFullToken = false;// 默认用户不是管理员组
+		break;
+	case TokenElevationTypeFull:    /* 已经成功提高进程权限 */
+		if (IsUserAnAdmin())  bFullToken = true; //当前以管理员权限运行
+		else                  bFullToken = false;//当前未以管理员权限运行
+		break;
+	case TokenElevationTypeLimited: /* 进程在以有限的权限运行 */
+		if (bIsAdmin)  bFullToken = false;//用户有管理员权限，但进程权限有限
+		else           bFullToken = false;//用户不是管理员组，且进程权限有限
+	}
+
+
+	return 0;
+}
 bool EnableDebugPrivilege()
 {
 	HANDLE hToken = NULL;
@@ -340,6 +425,88 @@ bool EnableDebugPrivilege()
 		}
 	}
 	return true;
+}
+CString SelFilePathSimple()
+{
+	TCHAR szFolderPath[MAX_PATH] = { 0 };
+	CString strFolderPath = _T("");
+
+	BROWSEINFO sInfo;
+	::ZeroMemory(&sInfo, sizeof(BROWSEINFO));
+
+	LPITEMIDLIST lpidlBrowse = ::SHBrowseForFolder(&sInfo);
+	if (lpidlBrowse != NULL)
+	{
+		if (::SHGetPathFromIDList(lpidlBrowse, szFolderPath))
+		{
+			strFolderPath = szFolderPath;
+		}
+		::CoTaskMemFree(lpidlBrowse);
+	}
+	return strFolderPath;
+
+}
+
+void SaveFile(bingd* bd, int type)
+{
+	CString path;
+	if (type == 0)
+	{
+		path = L"E:\\15pb\\阶段二\\SecurityMax\\SecurityMax\\data\\病毒库.txt";
+	}
+	else
+	{
+		path = L"E:\\15pb\\阶段二\\SecurityMax\\SecurityMax\\data\\白名单.txt";
+	}
+	
+	HANDLE hFile = CreateFile(path, GENERIC_WRITE, 0, NULL, OPEN_EXISTING
+		, FILE_ATTRIBUTE_NORMAL, NULL);
+	DWORD dwSize = 0;
+	SetFilePointer(hFile, 0, NULL, FILE_END);
+	WriteFile(hFile,bd, sizeof(bingd), &dwSize, NULL);
+	CloseHandle(hFile);
+}
+void DeleteFile(std::vector<bingd>* list, int type)
+{
+	CString path;
+	if (type == 0)
+	{
+		path = L"E:\\15pb\\阶段二\\SecurityMax\\SecurityMax\\data\\病毒库.txt";
+	}
+	else
+	{
+		path = L"E:\\15pb\\阶段二\\SecurityMax\\SecurityMax\\data\\白名单.txt";
+	}
+
+	HANDLE hFile = CreateFile(path, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS
+		, FILE_ATTRIBUTE_NORMAL, NULL);
+	DWORD dwSize = 0;
+	SetFilePointer(hFile, 0, NULL, FILE_BEGIN);
+	WriteFile(hFile, list, sizeof(bingd), &dwSize, NULL);
+	CloseHandle(hFile);
+}
+void ReadFile(bingd* bd,int off,int type)
+{
+	CString path;
+	if (type == 0)
+	{
+		path = L"E:\\15pb\\阶段二\\SecurityMax\\SecurityMax\\data\\病毒库.txt";
+	}
+	else
+	{
+		path = L"E:\\15pb\\阶段二\\SecurityMax\\SecurityMax\\data\\白名单.txt";
+	}
+	HANDLE hFile = CreateFile(path, GENERIC_READ, 0, NULL, OPEN_EXISTING
+		, FILE_ATTRIBUTE_NORMAL, NULL);
+	DWORD dwSize = 0;
+	SetFilePointer(hFile, off, NULL, FILE_BEGIN);
+	ReadFile(hFile, bd, sizeof(bingd), &dwSize, NULL);
+	if (dwSize==0)
+	{
+		//*bd->name =  "0" ;
+		sprintf_s(bd->md5, 50, "%s", "0");
+	}
+	CloseHandle(hFile);
 }
 
 

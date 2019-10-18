@@ -18,7 +18,8 @@
 #endif
 #include "CTool.h"
 #include <Psapi.h>
-
+#include "Md5.h"
+#include "Client.h"
 
 // CSecurityMaxDlg 对话框
 CRITICAL_SECTION g_critical;
@@ -67,6 +68,10 @@ BEGIN_MESSAGE_MAP(CSecurityMaxDlg, CDialogEx)
 	ON_COMMAND(ID_32779, &CSecurityMaxDlg::On32779)
 	ON_COMMAND(ID_32778, &CSecurityMaxDlg::On32778)
 	ON_WM_TIMER()
+	ON_COMMAND(ID_32782, &CSecurityMaxDlg::On32782)
+	ON_COMMAND(ID_32783, &CSecurityMaxDlg::On32783)
+	ON_WM_CLOSE()
+	ON_COMMAND(ID_32787, &CSecurityMaxDlg::On32787)
 END_MESSAGE_MAP()
 
 
@@ -82,7 +87,7 @@ BOOL CSecurityMaxDlg::OnInitDialog()
 	SetTimer(100, 1000, NULL);
 	cp = { 0 };
 	CreateThread(NULL, 0, ProcTh, (LPVOID)&cp, 0, NULL);
-	::RegisterHotKey(m_hWnd, 0x1244, MOD_CONTROL | MOD_SHIFT, 'X');//ctrl+shift+L
+	::RegisterHotKey(m_hWnd, 0x1244, MOD_CONTROL | MOD_SHIFT, 'X');//ctrl+shift+X
 	// 设置此对话框的图标。  当应用程序主窗口不是对话框时，框架将自动
 	//  执行此操作
 	SetIcon(m_hIcon, TRUE);			// 设置大图标
@@ -152,10 +157,10 @@ BOOL CSecurityMaxDlg::InitStatusBar()
 	};
 	m_bar.SetIndicators(indicators, sizeof(indicators) / sizeof(UINT));
 
-	CRect rect;
-	GetClientRect(&rect);
-	m_bar.MoveWindow(0, rect.bottom - 20, rect.right, 20);
-	CString buffer;
+	//CRect rect;
+	//(&rect);
+	//m_bar.MoveWindow(0, rect.bottom - 20, rect.right, 20);
+
 	//设置各栏长度
 	m_bar.SetPaneInfo(0, IDS_STRING167, SBPS_STRETCH, 60);
 	m_bar.SetPaneInfo(1, IDS_STRING168, SBPS_STRETCH, 100);
@@ -166,7 +171,7 @@ BOOL CSecurityMaxDlg::InitStatusBar()
 	m_bar.SetPaneInfo(6, IDS_STRING173, SBPS_STRETCH, 80);
 	m_bar.SetPaneInfo(7, IDS_STRING174, SBPS_STRETCH, 150);
 	m_bar.SetPaneText(0, L"进程数：");
-
+	CString buffer;
 	m_bar.SetPaneText(2, L"CPU利用率");
 	buffer.Format(L"%d", getCpuUse());
 	m_bar.SetPaneText(3, buffer);
@@ -175,7 +180,7 @@ BOOL CSecurityMaxDlg::InitStatusBar()
 	m_bar.SetPaneText(5, buffer);
 	m_bar.SetPaneText(6, L"时间");
 	m_bar.SetPaneText(7, L"time");
-	RepositionBars(AFX_IDW_CONTROLBAR_FIRST, AFX_IDW_CONTROLBAR_LAST, ID_INDICATOR_REC);//自动填充用户区域的窗口
+	//RepositionBars(AFX_IDW_CONTROLBAR_FIRST, AFX_IDW_CONTROLBAR_LAST, ID_INDICATOR_REC);//自动填充用户区域的窗口
 
 	m_bar.GetStatusBarCtrl().SetBkColor(RGB(180, 180, 180));//设置状态栏颜色
 	RepositionBars(AFX_IDW_CONTROLBAR_FIRST, AFX_IDW_CONTROLBAR_LAST, 0);
@@ -201,7 +206,9 @@ void CSecurityMaxDlg::OnSize(UINT nType, int cx, int cy)
 //关机
 void CSecurityMaxDlg::On32774()
 {
-	//EnableDebugPrivilege();
+	//EnableDebugPrivilege();		err,hr	ERROR_PRIVILEGE_NOT_HELD : 客户端没有所需的特权。 	unsigned int
+
+	ExitWindowsEx(EWX_REBOOT | EWX_FORCE, NULL);
 	//InitiateSystemShutdownEx(NULL,NULL,5,TRUE,FALSE,
 		//SHTDN_REASON_MAJOR_OTHER | SHTDN_REASON_MINOR_OTHER | SHTDN_REASON_FLAG_PLANNED);
 
@@ -211,7 +218,7 @@ void CSecurityMaxDlg::On32774()
 void CSecurityMaxDlg::On32775()
 {
 	//EnableDebugPrivilege();
-	//ExitWindowsEx(EWX_REBOOT | EWX_FORCE,
+	ExitWindowsEx(EWX_REBOOT | EWX_FORCE,NULL);
 	//	SHTDN_REASON_MAJOR_OTHER | SHTDN_REASON_MINOR_OTHER | SHTDN_REASON_FLAG_PLANNED);
 	//InitiateSystemShutdownEx(NULL, NULL, 0, TRUE, TRUE,
 	//	SHTDN_REASON_MAJOR_OTHER | SHTDN_REASON_MINOR_OTHER | SHTDN_REASON_FLAG_PLANNED);
@@ -220,6 +227,7 @@ void CSecurityMaxDlg::On32775()
 //睡眠
 void CSecurityMaxDlg::On32776()
 {
+	ExitWindowsEx(EWX_LOGOFF | EWX_FORCE, NULL);
 	//SetSuspendState(FALSE, FALSE, FALSE);
 }
 
@@ -249,29 +257,31 @@ void CSecurityMaxDlg::On32778()
 	GlobalMemoryStatusEx(&stcMemStatusEx);
 	DWORDLONG afterCleanUsedMem = stcMemStatusEx.ullTotalPhys - stcMemStatusEx.ullAvailPhys;
 }
-
+bool SystemIsX32() {
+	SYSTEM_INFO si;
+	// 获取系统信息
+	GetNativeSystemInfo(&si);
+	// 判断系统架构
+	if (si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64 || si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_IA64)
+	{
+		// 64位系统
+		return false;
+	}
+	else {
+		// 32位系统
+		return true;
+	}
+}
 //版本信息
 void CSecurityMaxDlg::On32779()
 {
-	OSVERSIONINFOEX os = { sizeof(OSVERSIONINFOEX) };
-	//GetVersionEx((OSVERSIONINFO*)& os);
-	switch (os.dwMajorVersion)
+	if (SystemIsX32())
 	{
-	case 10:
-	{
-		if (VER_NT_WORKSTATION == os.wProductType)
-		{
-			//win10版本
-			MessageBox(L"win10版本");
-		}
-		else
-		{
-			//Windows Server 2016
-			MessageBox(L"Windows Server 2016");
-		}
+		MessageBox(L"32位系统");
 	}
-	default:
-		break;
+	else
+	{
+		MessageBox(L"64位系统");
 	}
 }
 BOOL CSecurityMaxDlg::PreTranslateMessage(MSG* pMsg)
@@ -319,4 +329,81 @@ void CSecurityMaxDlg::OnTimer(UINT_PTR nIDEvent)
 		m_bar.SetPaneText(3, buffer);
 	}
 	CDialogEx::OnTimer(nIDEvent);
+}
+
+
+void CSecurityMaxDlg::On32782()
+{
+	CString m_path;
+	CString name;
+	bingd bd;
+	CFileDialog    dlgFile(TRUE, NULL, NULL, OFN_HIDEREADONLY, _T("Describe Files (*.exe,*.dll)|*.exe|All Files (*.*)|*.*||"), NULL);
+	if (dlgFile.DoModal())
+	{
+		m_path = dlgFile.GetPathName();
+		name = dlgFile.GetFileName();
+		strcpy_s(bd.name, 50,CWTOCA(name).GetString());
+	}
+	CStringA str = CWTOCA(m_path);
+	char* ch2 = new char[str.GetLength() + 1];
+	memset(ch2, 0, str.GetLength() + 1);
+	strcpy_s(ch2, str.GetLength() + 1, str.GetString());
+	char* md5 = md5FileValue(ch2);
+	strcpy_s(bd.md5, 50, md5);
+	delete[] ch2;
+	SaveFile(&bd,0);
+	MessageBox(L"添加成功");	
+}
+
+//添加病毒到云
+void CSecurityMaxDlg::On32783()
+{
+	CString m_path;
+	CString name;
+	bingd bd;
+	CFileDialog    dlgFile(TRUE, NULL, NULL, OFN_HIDEREADONLY, _T("Describe Files (*.exe,*.dll)|*.exe|All Files (*.*)|*.*||"), NULL);
+	if (dlgFile.DoModal())
+	{
+		m_path = dlgFile.GetPathName();
+		name = dlgFile.GetFileName();
+		strcpy_s(bd.name, 50, CWTOCA(name).GetString());
+	}
+	CStringA str = CWTOCA(m_path);
+	char* ch2 = new char[str.GetLength() + 1];
+	memset(ch2, 0, str.GetLength() + 1);
+	strcpy_s(ch2, str.GetLength() + 1, str.GetString());
+	char* md5 = md5FileValue(ch2);
+	strcpy_s(bd.md5, 50, md5);
+	delete[] ch2;
+	Insert(&client, bd.name, bd.md5);
+	DWORD dw = recvProc1((LPVOID*)& client);
+}
+
+
+void CSecurityMaxDlg::OnClose()
+{
+	// TODO: 在此添加消息处理程序代码和/或调用默认值
+
+	CDialogEx::OnClose();
+}
+
+//提权
+void CSecurityMaxDlg::On32787()
+{
+	this->ShowWindow(SW_HIDE);
+	// 2. 获取当前程序路径
+	WCHAR szApplication[MAX_PATH] = { 0 };
+	DWORD cchLength = _countof(szApplication);
+	QueryFullProcessImageName(GetCurrentProcess(), 0,
+		szApplication, &cchLength);
+	// 3. 以管理员权限重新打开进程
+	SHELLEXECUTEINFO sei = { sizeof(SHELLEXECUTEINFO) };
+	sei.lpVerb = L"runas";      // 请求提升权限
+	sei.lpFile = szApplication; // 可执行文件路径
+	sei.lpParameters = NULL;          // 不需要参数
+	sei.nShow = SW_SHOWNORMAL; // 正常显示窗口
+	if (ShellExecuteEx(&sei))
+		exit(0);
+	else
+		::ShowWindow(m_hWnd, SW_SHOWNORMAL);
 }

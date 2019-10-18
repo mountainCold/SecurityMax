@@ -5,6 +5,8 @@ VisualStudioVersion = 16.0.29215.179
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SecurityMax", "SecurityMax\SecurityMax.vcxproj", "{25EADEBF-7CE5-486D-B587-F53CD891983F}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HOOkPRoc", "HOOkPRoc\HOOkPRoc.vcxproj", "{A36CB4B8-E6B6-4B29-8136-43901206BE45}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -21,6 +23,14 @@ Global
 		{25EADEBF-7CE5-486D-B587-F53CD891983F}.Release|x64.Build.0 = Release|x64
 		{25EADEBF-7CE5-486D-B587-F53CD891983F}.Release|x86.ActiveCfg = Release|Win32
 		{25EADEBF-7CE5-486D-B587-F53CD891983F}.Release|x86.Build.0 = Release|Win32
+		{A36CB4B8-E6B6-4B29-8136-43901206BE45}.Debug|x64.ActiveCfg = Debug|x64
+		{A36CB4B8-E6B6-4B29-8136-43901206BE45}.Debug|x64.Build.0 = Debug|x64
+		{A36CB4B8-E6B6-4B29-8136-43901206BE45}.Debug|x86.ActiveCfg = Debug|Win32
+		{A36CB4B8-E6B6-4B29-8136-43901206BE45}.Debug|x86.Build.0 = Debug|Win32
+		{A36CB4B8-E6B6-4B29-8136-43901206BE45}.Release|x64.ActiveCfg = Release|x64
+		{A36CB4B8-E6B6-4B29-8136-43901206BE45}.Release|x64.Build.0 = Release|x64
+		{A36CB4B8-E6B6-4B29-8136-43901206BE45}.Release|x86.ActiveCfg = Release|Win32
+		{A36CB4B8-E6B6-4B29-8136-43901206BE45}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

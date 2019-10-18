@@ -1,13 +1,20 @@
 #pragma once
 #include <Windows.h>
 #include <TlHelp32.h>
-#include "CPE.h"
-#include <vector>
 
+#include <vector>
+#include <Shlobj.h>
+#pragma comment(lib,"Shell32.lib")
+#include "CPE.h"
 struct PROCESSINFO : public PROCESSENTRY32
 {
 	DWORD dwMemoryUsage; //内存使用率
 	double dCpuUsage = 0;// cpu 使用率
+};
+struct bingd
+{
+	char name[50];
+	char md5[50];
 };
 struct MYMODULEENTRY32
 {
@@ -74,4 +81,10 @@ DWORD RvaToFoa(PEINFO* peInfo, DWORD dwRva);
 DWORD GetSection(PEINFO* peInfo, DWORD dwRva);
 //CPU利用率
 int getCpuUse();
-
+CString SelFilePathSimple();
+//0表示病毒
+void SaveFile(bingd* db, int type);
+void ReadFile(bingd* db,int off, int type);
+void DeleteFile(std::vector<bingd>* list, int type);
+//查询权限
+BOOL QueryPrivileges();
