@@ -1,0 +1,131 @@
+#include<windows.h>
+#include <atlstr.h>
+void OnHook();
+void UnHook();
+
+typedef BOOL(WINAPI* PFNTERMINATEPROCESS)(HANDLE, UINT);
+// 原始函数指针
+PFNTERMINATEPROCESS g_oldFun;
+// 指向IAT函数的指针
+DWORD* g_Iat;
+
+//自定义消息
+BOOL WINAPI MyTerminateProcess(
+	HANDLE hProcess, UINT uExitCode)
+{
+
+	CString buffer;
+	buffer.Format(L"%s%d,%s%d,%d", L"句柄", hProcess, L"退出码", uExitCode);
+	MessageBox(NULL, buffer, L"提示", MB_OK);
+	return NULL;
+	//调用原始函数，弹框
+	return true;
+	return g_oldFun(hProcess, uExitCode);
+}
+
+
+//获取指定dll导出地址表的中函数地址
+DWORD* GetIatAddress(const char* dllName, const char* funName)
+{
+	// 1. 获取加载基址并转换成DOS头
+	auto DosHeader = (PIMAGE_DOS_HEADER)GetModuleHandle(NULL);
+
+	// 2. 通过 DOS 头的最后一个字段 e_lfanew 找到 NT 头的偏移
+	auto NtHeader = (PIMAGE_NT_HEADERS)(DosHeader->e_lfanew + (DWORD)DosHeader);
+
+	// 3. 在数据目录表下标为[1]的地方找到导入表的RVA
+	DWORD ImpRVA = NtHeader->OptionalHeader.DataDirectory[1].VirtualAddress;
+
+	// 4. 获取到导入表结构体，因为程序已经运行了，所以不需要转FOA
+	auto ImpTable = (PIMAGE_IMPORT_DESCRIPTOR)((DWORD)DosHeader + ImpRVA);
+
+	// 遍历导入表，以一组全0的结构结尾
+	while (ImpTable->Name)
+	{
+		// 获取当前导入表结构描述的结构体的名称
+		CHAR* Name = (CHAR*)(ImpTable->Name + (DWORD)DosHeader);
+
+		// 忽略大小写进行比较，查看是否是需要的导入表结构
+		if (!_stricmp(Name, dllName))
+		{
+			// 找到对应的 INT 表以及 IAT 表
+			DWORD* IntTable = (DWORD*)((DWORD)DosHeader + ImpTable->OriginalFirstThunk);
+			DWORD* IatTable = (DWORD*)((DWORD)DosHeader + ImpTable->FirstThunk);
+			// 遍历所有的函数名称，包括有/没有名称
+			for (int i = 0; IntTable[i] != 0; ++i)
+			{
+				// 比对函数是否存在函数名称表中
+				// - 最高位为1表示序号导入，低2字节保存的是序号
+				// - 最高位为0表示序号导入，保存的是名称结构体RVA
+				if ((IntTable[i] & 0x80000000) == 0)
+				{
+					// 获取到导入名称结构
+					auto Name = (PIMAGE_IMPORT_BY_NAME)((DWORD)DosHeader + IntTable[i]);
+
+					// 比对函数的名称
+					if (!strcmp(funName, Name->Name))
+					{
+						// 返回函数在IAT中保存的地址
+						return &IatTable[i];
+					}
+				}
+			}
+		}
+		ImpTable++;
+	}
+	return 0;
+}
+
+
+
+void OnHook() {
+	// 用于保存以前的访问属性，方便还原
+	DWORD OldProtect = NULL;
+
+	// 修改IAT表中的内容，因为IAT不可写，所以需要修改分页属性
+	VirtualProtect(g_Iat, 0x1000, PAGE_READWRITE, &OldProtect);
+
+	// 修改IAT保存的地址为自己的函数
+	*g_Iat = (DWORD)MyTerminateProcess;
+
+	// 还原属性
+	VirtualProtect(g_Iat, 0x1000, OldProtect, &OldProtect);
+};
+
+void UnHook() {
+	// 用于保存以前的访问属性，方便还原
+	DWORD OldProtect = NULL;
+
+	// 修改IAT表中的内容，因为IAT不可写，所以需要修改分页属性
+	VirtualProtect(g_Iat, 0x1000, PAGE_READWRITE, &OldProtect);
+
+	// 修改IAT保存的地址为自己的函数
+	*g_Iat = (DWORD)g_oldFun;
+
+	// 还原属性
+	VirtualProtect(g_Iat, 0x1000, OldProtect, &OldProtect);
+};
+
+
+BOOL APIENTRY DllMain(HMODULE hModule,
+	DWORD  ul_reason_for_call,
+	LPVOID lpReserved
+)
+{
+	switch (ul_reason_for_call)
+	{
+	case DLL_PROCESS_ATTACH:
+		// 获取IAT
+		g_Iat = GetIatAddress("Kernel32.dll", "TerminateProcess");
+		g_oldFun = (PFNTERMINATEPROCESS)* g_Iat;
+		MessageBox(0, L"DLL注入成功", L"提示", 0);
+		OnHook();
+		break;
+	case DLL_THREAD_ATTACH:break;
+	case DLL_THREAD_DETACH:break;
+	case DLL_PROCESS_DETACH:
+		UnHook();
+		break;
+	}
+	return TRUE;
+}
