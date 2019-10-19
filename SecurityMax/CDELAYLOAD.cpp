@@ -55,6 +55,11 @@ void CDELAYLOAD::setListTextDL()
 	int index = 0;
 	CString buffer;
 	PIMAGE_DELAYLOAD_DESCRIPTOR pDelayload = peInfo->delayload;
+	if (pDelayload->ImportNameTableRVA == 0)
+	{
+		MessageBox(L"不存在该表");
+		return;
+	}
 	while (pDelayload->DllNameRVA)
 	{
 		m_list1.InsertItem(index, L"");

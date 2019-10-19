@@ -206,22 +206,56 @@ void CSecurityMaxDlg::OnSize(UINT nType, int cx, int cy)
 //关机
 void CSecurityMaxDlg::On32774()
 {
-	//EnableDebugPrivilege();		err,hr	ERROR_PRIVILEGE_NOT_HELD : 客户端没有所需的特权。 	unsigned int
+	HANDLE hToken;
+	TOKEN_PRIVILEGES tkp;
 
-	ExitWindowsEx(EWX_REBOOT | EWX_FORCE, NULL);
-	//InitiateSystemShutdownEx(NULL,NULL,5,TRUE,FALSE,
-		//SHTDN_REASON_MAJOR_OTHER | SHTDN_REASON_MINOR_OTHER | SHTDN_REASON_FLAG_PLANNED);
+
+	if (!OpenProcessToken(GetCurrentProcess(),
+		TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hToken))
+		MessageBox(L"操作失败");
+
+
+	LookupPrivilegeValue(NULL, SE_SHUTDOWN_NAME,
+		&tkp.Privileges[0].Luid);
+
+	tkp.PrivilegeCount = 1;  // one privilege to set    
+	tkp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+
+	AdjustTokenPrivileges(hToken, FALSE, &tkp, 0,
+		(PTOKEN_PRIVILEGES)NULL, 0);
+
+	if (GetLastError() != ERROR_SUCCESS)
+		MessageBox(L"操作失败");
+
+	// Shut down the system and force all applications to close. 
+
+	if (!ExitWindowsEx(EWX_SHUTDOWN | EWX_FORCE,
+		SHTDN_REASON_MAJOR_OPERATINGSYSTEM |
+		SHTDN_REASON_MINOR_UPGRADE |
+		SHTDN_REASON_FLAG_PLANNED))
+		MessageBox(L"操作失败");
+
+	//shutdown was successful
 
 }
 
 //重启
 void CSecurityMaxDlg::On32775()
 {
-	//EnableDebugPrivilege();
-	ExitWindowsEx(EWX_REBOOT | EWX_FORCE,NULL);
-	//	SHTDN_REASON_MAJOR_OTHER | SHTDN_REASON_MINOR_OTHER | SHTDN_REASON_FLAG_PLANNED);
-	//InitiateSystemShutdownEx(NULL, NULL, 0, TRUE, TRUE,
-	//	SHTDN_REASON_MAJOR_OTHER | SHTDN_REASON_MINOR_OTHER | SHTDN_REASON_FLAG_PLANNED);
+	if (MessageBox(_T("确定要重启吗？"), _T("警告"), MB_YESNO) == IDYES)
+	{
+		HANDLE hToken; TOKEN_PRIVILEGES tkp;
+		if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hToken))
+		{
+			MessageBox(_T("重启失败..."), _T("警告"), MB_OK); return;
+		}
+		LookupPrivilegeValue(NULL, SE_SHUTDOWN_NAME, &tkp.Privileges[0].Luid);
+		tkp.PrivilegeCount = 1;
+		tkp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+		AdjustTokenPrivileges(hToken, FALSE, &tkp, sizeof(TOKEN_PRIVILEGES), (PTOKEN_PRIVILEGES)NULL, NULL);
+		if (GetLastError() != ERROR_SUCCESS) { MessageBox(_T("重启失败..."), _T("警告"), MB_OK); return; }
+		ExitWindowsEx(EWX_REBOOT | EWX_FORCE, 0);
+	}
 }
 
 //睡眠

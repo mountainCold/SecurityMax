@@ -34,6 +34,11 @@ void CDAOCHU::setEditTextE()
 {
 	CString buffer;
 	PIMAGE_EXPORT_DIRECTORY pExport = peInfo->exportT;
+	if (peInfo->exFoa == 0)
+	{
+		MessageBox(L"不存在导出表");
+		return ;
+	}
 	buffer.Format(L"%08X", peInfo->exFoa);
 	SetDlgItemText(IDC_EDIT1, buffer);
 	buffer.Format(L"%08X", pExport->Characteristics);

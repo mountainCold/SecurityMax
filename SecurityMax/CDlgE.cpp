@@ -116,6 +116,7 @@ void CDlgE::setEditTextE(PEINFO* peHead)
 	buffer.Format(L"%08X", peHead ->NumberOfRvaAndSizes );
 	SetDlgItemText(IDC_EDIT17,buffer);
 
+	m_list.DeleteAllItems();
 	PIMAGE_SECTION_HEADER sectionHead = peHead->sectionHead;
 	for (size_t i = 0; i < peHead->NumberOfSections; i++)
 	{

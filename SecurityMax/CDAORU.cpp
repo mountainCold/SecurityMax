@@ -54,6 +54,11 @@ void CDAORU::setListText()
 	int index = 0;
 	CString buffer;
 	PIMAGE_IMPORT_DESCRIPTOR pImport = peInfo->importT;
+	if (pImport->OriginalFirstThunk == 0)
+	{
+		MessageBox(L"不存在该表");
+		return;
+	}
 	while (pImport->Name)
 	{
 		m_list1.InsertItem(index, L"");
